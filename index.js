@@ -51,6 +51,20 @@ client.on("interactionCreate", async (interaction) => {
         });
     }
 
+    if (interaction.customId === "xo") {
+        return interaction.update({
+            embeds: [xoEmbed()],
+            components: xoButtons()
+        });
+    }
+
+    if (interaction.customId === "start_xo") {
+        return interaction.reply({
+            content: "قريبًا نضيف اختيار الخصم ونبدأ اللعبة.",
+            ephemeral: true
+        });
+    }
+
     if (interaction.customId === "back") {
         return interaction.update({
             embeds: [mainMenuEmbed()],
@@ -192,6 +206,45 @@ function katButtons() {
                 .setLabel("سؤال جديد")
                 .setEmoji("🎲")
                 .setStyle(ButtonStyle.Primary),
+
+            new ButtonBuilder()
+                .setCustomId("back")
+                .setLabel("رجوع")
+                .setEmoji("🔙")
+                .setStyle(ButtonStyle.Secondary),
+
+            new ButtonBuilder()
+                .setCustomId("close")
+                .setLabel("إغلاق")
+                .setEmoji("❌")
+                .setStyle(ButtonStyle.Danger)
+        )
+    ];
+}
+
+function xoEmbed() {
+    return new EmbedBuilder()
+        .setColor("#7B2CBF")
+        .setTitle("❌⭕ إكس أو")
+        .setDescription(`
+العب ضد أحد أصدقائك.
+
+━━━━━━━━━━━━━━━━━━
+
+👥 عدد اللاعبين: 2
+
+اضغط على "ابدأ لعبة".
+        `);
+}
+
+function xoButtons() {
+    return [
+        new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId("start_xo")
+                .setLabel("ابدأ لعبة")
+                .setEmoji("🎮")
+                .setStyle(ButtonStyle.Success),
 
             new ButtonBuilder()
                 .setCustomId("back")
