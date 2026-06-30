@@ -1,4 +1,5 @@
 const questions = require("./data/kat_questions.json");
+const { xoMenuEmbed, startXO, handleXOButton } = require("./games/xo.js");
 
 let lastKatQuestion = null;
 
