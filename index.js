@@ -1,5 +1,6 @@
 const questions = require("./data/kat_questions.json");
 const { startXO, handleXOButton } = require("./games/xo.js");
+const { quizMenuEmbed, quizMenuButtons, handleQuizButton } = require("./games/quiz.js");
 
 let lastKatQuestion = null;
 
@@ -45,6 +46,9 @@ client.on("interactionCreate", async (interaction) => {
     const handledXO = await handleXOButton(interaction);
     if (handledXO) return;
 
+    const handledQuiz = await handleQuizButton(interaction);
+    if (handledQuiz) return;
+
     if (interaction.customId === "kat") {
         return interaction.update({
             embeds: [katEmbed()],
@@ -56,6 +60,13 @@ client.on("interactionCreate", async (interaction) => {
         return interaction.update({
             embeds: [katQuestionEmbed()],
             components: katButtons()
+        });
+    }
+
+    if (interaction.customId === "quiz") {
+        return interaction.update({
+            embeds: [quizMenuEmbed()],
+            components: quizMenuButtons()
         });
     }
 
@@ -98,8 +109,9 @@ function mainMenuEmbed() {
 
 ━━━━━━━━━━━━━━━━━━
 
-📚 الأسئلة: ${questions.length}
-🎮 الألعاب: 8
+🎭 كت
+❌⭕ إكس أو
+❓ أسئلة عامة
 ⭐ قريبًا المزيد...
         `);
 }
