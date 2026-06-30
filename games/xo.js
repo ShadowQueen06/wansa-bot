@@ -2,35 +2,12 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require("
 
 const xoGames = new Map();
 
-function xoMenuEmbed() {
-    return new EmbedBuilder()
-        .setColor("#7B2CBF")
-        .setTitle("❌⭕ إكس أو")
-        .setDescription(`
-العب ضد أحد أصدقائك.
-
-━━━━━━━━━━━━━━━━━━
-
-اكتب الأمر بهذا الشكل:
-
--xo @player
-        `);
-}
-
 function startXO(message) {
     const opponent = message.mentions.users.first();
 
-    if (!opponent) {
-        return message.reply("منشن اللاعب هكذا: `-xo @player`");
-    }
-
-    if (opponent.bot) {
-        return message.reply("ما تگدر تلعب ضد بوت.");
-    }
-
-    if (opponent.id === message.author.id) {
-        return message.reply("ما تگدر تلعب ضد نفسك.");
-    }
+    if (!opponent) return message.reply("منشن اللاعب هكذا: `-xo @player`");
+    if (opponent.bot) return message.reply("ما تگدر تلعب ضد بوت.");
+    if (opponent.id === message.author.id) return message.reply("ما تگدر تلعب ضد نفسك.");
 
     const gameId = message.channel.id;
 
@@ -71,7 +48,6 @@ ${board[6] || "⬜"} ${board[7] || "⬜"} ${board[8] || "⬜"}
 
 function boardButtons(gameId) {
     const game = xoGames.get(gameId);
-
     const rows = [];
 
     for (let r = 0; r < 3; r++) {
@@ -79,13 +55,14 @@ function boardButtons(gameId) {
 
         for (let c = 0; c < 3; c++) {
             const index = r * 3 + c;
+            const value = game.board[index];
 
             row.addComponents(
                 new ButtonBuilder()
                     .setCustomId(`xo_${gameId}_${index}`)
-                    .setLabel(game.board[index] || " ")
-                    .setStyle(game.board[index] ? ButtonStyle.Secondary : ButtonStyle.Primary)
-                    .setDisabled(Boolean(game.board[index]))
+                    .setLabel(value || `${index + 1}`)
+                    .setStyle(value ? ButtonStyle.Secondary : ButtonStyle.Primary)
+                    .setDisabled(Boolean(value))
             );
         }
 
@@ -128,34 +105,22 @@ async function handleXOButton(interaction) {
     const game = xoGames.get(gameId);
 
     if (!game) {
-        await interaction.reply({
-            content: "اللعبة انتهت أو غير موجودة.",
-            ephemeral: true
-        });
+        await interaction.reply({ content: "اللعبة انتهت.", ephemeral: true });
         return true;
     }
 
     if (!game.players.includes(interaction.user.id)) {
-        await interaction.reply({
-            content: "هذه اللعبة مو إلك.",
-            ephemeral: true
-        });
+        await interaction.reply({ content: "هذه اللعبة مو إلك.", ephemeral: true });
         return true;
     }
 
     if (interaction.user.id !== game.turn) {
-        await interaction.reply({
-            content: "مو دورك.",
-            ephemeral: true
-        });
+        await interaction.reply({ content: "مو دورك.", ephemeral: true });
         return true;
     }
 
     if (game.board[index]) {
-        await interaction.reply({
-            content: "هذا المكان محجوز.",
-            ephemeral: true
-        });
+        await interaction.reply({ content: "هذا المكان محجوز.", ephemeral: true });
         return true;
     }
 
@@ -214,7 +179,6 @@ ${renderBoard(game.board)}
 }
 
 module.exports = {
-    xoMenuEmbed,
     startXO,
     handleXOButton
 };
