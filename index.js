@@ -1,5 +1,7 @@
 const questions = require("./data/kat_questions.json");
+
 let lastKatQuestion = null;
+
 const {
     Client,
     GatewayIntentBits,
@@ -81,7 +83,7 @@ function mainMenuEmbed() {
 
 ━━━━━━━━━━━━━━━━━━
 
-📚 الأسئلة: 2000
+📚 الأسئلة: ${questions.length}
 🎮 الألعاب: 8
 ⭐ قريبًا المزيد...
         `);
@@ -139,16 +141,32 @@ function mainMenuButtons() {
     ];
 }
 
+function katEmbed() {
+    return new EmbedBuilder()
+        .setColor("#7B2CBF")
+        .setTitle("🎭 كت")
+        .setDescription(`
+اضغط على الزر للحصول على سؤال عشوائي.
+
+━━━━━━━━━━━━━━━━━━
+
+📚 عدد الأسئلة: ${questions.length}
+🎲 يتم اختيار سؤال مختلف في كل مرة
+        `);
+}
+
 function katQuestionEmbed() {
-    let question;
+    let randomQuestion;
 
     do {
-        question = questions[Math.floor(Math.random() * questions.length)];
-    } while (question === lastKatQuestion && questions.length > 1);
+        randomQuestion = questions[Math.floor(Math.random() * questions.length)];
+    } while (
+        lastKatQuestion &&
+        randomQuestion.id === lastKatQuestion.id &&
+        questions.length > 1
+    );
 
-    lastKatQuestion = question;
-
-    const questionNumber = questions.indexOf(question) + 1;
+    lastKatQuestion = randomQuestion;
 
     return new EmbedBuilder()
         .setColor("#7B2CBF")
@@ -156,12 +174,12 @@ function katQuestionEmbed() {
         .setDescription(`
 ❓ السؤال
 
-${question}
+${randomQuestion.question}
 
 ━━━━━━━━━━━━━━━━━━
 
-📚 التصنيف: كت
-🆔 السؤال: #${questionNumber}
+📚 التصنيف: ${randomQuestion.category}
+🆔 السؤال: #${randomQuestion.id}
 📖 المجموع: ${questions.length}
         `);
 }
