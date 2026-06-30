@@ -34,26 +34,38 @@ client.on("interactionCreate", async (interaction) => {
     if (!interaction.isButton()) return;
 
     if (interaction.customId === "kat") {
-        await interaction.update({
+        return interaction.update({
             embeds: [katEmbed()],
             components: katButtons()
         });
     }
 
+    if (interaction.customId === "new_kat") {
+        return interaction.update({
+            embeds: [katQuestionEmbed()],
+            components: katButtons()
+        });
+    }
+
     if (interaction.customId === "back") {
-        await interaction.update({
+        return interaction.update({
             embeds: [mainMenuEmbed()],
             components: mainMenuButtons()
         });
     }
 
     if (interaction.customId === "close") {
-        await interaction.update({
+        return interaction.update({
             content: "تم إغلاق القائمة.",
             embeds: [],
             components: []
         });
     }
+
+    return interaction.reply({
+        content: "هذه الميزة قريبًا.",
+        ephemeral: true
+    });
 });
 
 function mainMenuEmbed() {
@@ -125,17 +137,28 @@ function mainMenuButtons() {
     ];
 }
 
-function katEmbed() {
+function katQuestionEmbed() {
+    const questions = [
+        "إذا تقدر ترجع يوم واحد من حياتك، أي يوم تختار؟",
+        "شنو أكثر موقف ضحكك وما نسيته؟",
+        "منو أكثر شخص تثق بيه؟",
+        "شنو الشي اللي تحبه بنفسك؟",
+        "إذا ربحت مليون، شنو أول شي تشتري؟"
+    ];
+
+    const question = questions[Math.floor(Math.random() * questions.length)];
+
     return new EmbedBuilder()
         .setColor("#7B2CBF")
         .setTitle("🎭 كت")
         .setDescription(`
-اضغط على الزر للحصول على سؤال عشوائي.
+❓ السؤال
+
+${question}
 
 ━━━━━━━━━━━━━━━━━━
 
-📚 عدد الأسئلة: 2000
-🎲 يتم اختيار سؤال مختلف في كل مرة
+📚 التصنيف: كت
         `);
 }
 
