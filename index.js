@@ -1,3 +1,4 @@
+const questions = require("./data/kat_questions.json");
 const {
     Client,
     GatewayIntentBits,
