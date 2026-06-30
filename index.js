@@ -139,14 +139,6 @@ function mainMenuButtons() {
 }
 
 function katQuestionEmbed() {
-    const questions = [
-        "إذا تقدر ترجع يوم واحد من حياتك، أي يوم تختار؟",
-        "شنو أكثر موقف ضحكك وما نسيته؟",
-        "منو أكثر شخص تثق بيه؟",
-        "شنو الشي اللي تحبه بنفسك؟",
-        "إذا ربحت مليون، شنو أول شي تشتري؟"
-    ];
-
     const question = questions[Math.floor(Math.random() * questions.length)];
 
     return new EmbedBuilder()
@@ -160,6 +152,7 @@ ${question}
 ━━━━━━━━━━━━━━━━━━
 
 📚 التصنيف: كت
+🎲 عدد الأسئلة: ${questions.length}
         `);
 }
 
