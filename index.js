@@ -1,4 +1,5 @@
 const questions = require("./data/kat_questions.json");
+let lastKatQuestion = null;
 const {
     Client,
     GatewayIntentBits,
@@ -139,7 +140,15 @@ function mainMenuButtons() {
 }
 
 function katQuestionEmbed() {
-    const question = questions[Math.floor(Math.random() * questions.length)];
+    let question;
+
+    do {
+        question = questions[Math.floor(Math.random() * questions.length)];
+    } while (question === lastKatQuestion && questions.length > 1);
+
+    lastKatQuestion = question;
+
+    const questionNumber = questions.indexOf(question) + 1;
 
     return new EmbedBuilder()
         .setColor("#7B2CBF")
@@ -152,7 +161,8 @@ ${question}
 ━━━━━━━━━━━━━━━━━━
 
 📚 التصنيف: كت
-🎲 عدد الأسئلة: ${questions.length}
+🆔 السؤال: #${questionNumber}
+📖 المجموع: ${questions.length}
         `);
 }
 
