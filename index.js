@@ -1,5 +1,5 @@
 const questions = require("./data/kat_questions.json");
-const { xoMenuEmbed, startXO, handleXOButton } = require("./games/xo.js");
+const { startXO, handleXOButton } = require("./games/xo.js");
 
 let lastKatQuestion = null;
 
@@ -28,15 +28,22 @@ client.on("messageCreate", async (message) => {
     if (message.author.bot) return;
 
     if (message.content === "-العاب") {
-        await message.reply({
+        return message.reply({
             embeds: [mainMenuEmbed()],
             components: mainMenuButtons()
         });
+    }
+
+    if (message.content.startsWith("-xo")) {
+        return startXO(message);
     }
 });
 
 client.on("interactionCreate", async (interaction) => {
     if (!interaction.isButton()) return;
+
+    const handledXO = await handleXOButton(interaction);
+    if (handledXO) return;
 
     if (interaction.customId === "kat") {
         return interaction.update({
@@ -53,15 +60,8 @@ client.on("interactionCreate", async (interaction) => {
     }
 
     if (interaction.customId === "xo") {
-        return interaction.update({
-            embeds: [xoEmbed()],
-            components: xoButtons()
-        });
-    }
-
-    if (interaction.customId === "start_xo") {
         return interaction.reply({
-            content: "قريبًا نضيف اختيار الخصم ونبدأ اللعبة.",
+            content: "لبداية لعبة إكس أو اكتب:\n`-xo @player`",
             ephemeral: true
         });
     }
@@ -207,45 +207,6 @@ function katButtons() {
                 .setLabel("سؤال جديد")
                 .setEmoji("🎲")
                 .setStyle(ButtonStyle.Primary),
-
-            new ButtonBuilder()
-                .setCustomId("back")
-                .setLabel("رجوع")
-                .setEmoji("🔙")
-                .setStyle(ButtonStyle.Secondary),
-
-            new ButtonBuilder()
-                .setCustomId("close")
-                .setLabel("إغلاق")
-                .setEmoji("❌")
-                .setStyle(ButtonStyle.Danger)
-        )
-    ];
-}
-
-function xoEmbed() {
-    return new EmbedBuilder()
-        .setColor("#7B2CBF")
-        .setTitle("❌⭕ إكس أو")
-        .setDescription(`
-العب ضد أحد أصدقائك.
-
-━━━━━━━━━━━━━━━━━━
-
-👥 عدد اللاعبين: 2
-
-اضغط على "ابدأ لعبة".
-        `);
-}
-
-function xoButtons() {
-    return [
-        new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId("start_xo")
-                .setLabel("ابدأ لعبة")
-                .setEmoji("🎮")
-                .setStyle(ButtonStyle.Success),
 
             new ButtonBuilder()
                 .setCustomId("back")
