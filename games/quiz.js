@@ -1,59 +1,49 @@
-const quizQuestions = require("../data/quiz_questions.json");
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+const { color, rewards } = require("../config.js");
+const questions = require("../data/quiz_questions.json");
+const { addReward } = require("../utils/db.js");
 
-const {
-    ActionRowBuilder,
-    ButtonBuilder,
-    ButtonStyle,
-    EmbedBuilder
-} = require("discord.js");
+let lastQuestionId = null;
 
-function quizMenuEmbed() {
+function menuEmbed() {
     return new EmbedBuilder()
-        .setColor("#7B2CBF")
+        .setColor(color)
         .setTitle("❓ أسئلة عامة")
         .setDescription(`
 اختبر معلوماتك بسؤال عشوائي.
 
 ━━━━━━━━━━━━━━━━━━
 
-📚 عدد الأسئلة: ${quizQuestions.length}
-🏆 الإجابة الصحيحة تعطيك نقطة لاحقًا
+📚 عدد الأسئلة: ${questions.length}
+🏆 الإجابة الصحيحة: +${rewards.quizCorrectCoins} عملات و +${rewards.quizCorrectXp} XP
 
 اضغط على "ابدأ".
         `);
 }
 
-function quizMenuButtons() {
+function menuButtons() {
     return [
         new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId("start_quiz")
-                .setLabel("ابدأ")
-                .setEmoji("▶️")
-                .setStyle(ButtonStyle.Success),
-
-            new ButtonBuilder()
-                .setCustomId("back")
-                .setLabel("رجوع")
-                .setEmoji("🔙")
-                .setStyle(ButtonStyle.Secondary),
-
-            new ButtonBuilder()
-                .setCustomId("close")
-                .setLabel("إغلاق")
-                .setEmoji("❌")
-                .setStyle(ButtonStyle.Danger)
+            new ButtonBuilder().setCustomId("quiz_start").setLabel("ابدأ").setEmoji("▶️").setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId("back").setLabel("رجوع").setEmoji("🔙").setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId("close").setLabel("إغلاق").setEmoji("❌").setStyle(ButtonStyle.Danger)
         )
     ];
 }
 
-function randomQuiz() {
-    return quizQuestions[Math.floor(Math.random() * quizQuestions.length)];
+function randomQuestion() {
+    let q;
+    do {
+        q = questions[Math.floor(Math.random() * questions.length)];
+    } while (q.id === lastQuestionId && questions.length > 1);
+
+    lastQuestionId = q.id;
+    return q;
 }
 
-function quizQuestionEmbed(question) {
+function questionEmbed(question) {
     return new EmbedBuilder()
-        .setColor("#7B2CBF")
+        .setColor(color)
         .setTitle("❓ أسئلة عامة")
         .setDescription(`
 📚 التصنيف: ${question.category}
@@ -69,73 +59,55 @@ D) ${question.answers[3]}
         `);
 }
 
-function quizAnswerButtons(question) {
+function answerButtons(question) {
     return [
         new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId(`quiz_${question.id}_0`)
-                .setLabel(question.answers[0])
-                .setStyle(ButtonStyle.Primary),
-
-            new ButtonBuilder()
-                .setCustomId(`quiz_${question.id}_1`)
-                .setLabel(question.answers[1])
-                .setStyle(ButtonStyle.Primary)
+            new ButtonBuilder().setCustomId(`quiz_answer_${question.id}_0`).setLabel(question.answers[0].slice(0, 80)).setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId(`quiz_answer_${question.id}_1`).setLabel(question.answers[1].slice(0, 80)).setStyle(ButtonStyle.Primary)
         ),
-
         new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId(`quiz_${question.id}_2`)
-                .setLabel(question.answers[2])
-                .setStyle(ButtonStyle.Primary),
-
-            new ButtonBuilder()
-                .setCustomId(`quiz_${question.id}_3`)
-                .setLabel(question.answers[3])
-                .setStyle(ButtonStyle.Primary)
+            new ButtonBuilder().setCustomId(`quiz_answer_${question.id}_2`).setLabel(question.answers[2].slice(0, 80)).setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId(`quiz_answer_${question.id}_3`).setLabel(question.answers[3].slice(0, 80)).setStyle(ButtonStyle.Primary)
         )
     ];
 }
 
-async function handleQuizButton(interaction) {
-    if (interaction.customId === "start_quiz") {
-        const question = randomQuiz();
+async function handleButton(interaction) {
+    if (interaction.customId === "quiz_start") {
+        const question = randomQuestion();
 
         return interaction.update({
-            embeds: [quizQuestionEmbed(question)],
-            components: quizAnswerButtons(question)
+            embeds: [questionEmbed(question)],
+            components: answerButtons(question)
         });
     }
 
-    if (!interaction.customId.startsWith("quiz_")) return false;
+    if (!interaction.customId.startsWith("quiz_answer_")) return false;
 
     const parts = interaction.customId.split("_");
-    const questionId = Number(parts[1]);
-    const answerIndex = Number(parts[2]);
-
-    const question = quizQuestions.find(q => q.id === questionId);
+    const questionId = Number(parts[2]);
+    const answerIndex = Number(parts[3]);
+    const question = questions.find(q => q.id === questionId);
 
     if (!question) {
-        await interaction.reply({
-            content: "السؤال غير موجود.",
-            ephemeral: true
-        });
-        return true;
+        return interaction.reply({ content: "السؤال غير موجود.", ephemeral: true });
     }
 
     const isCorrect = answerIndex === question.correct;
 
-    const resultText = isCorrect
-        ? "✅ إجابة صحيحة!"
-        : `❌ إجابة خاطئة.\n\nالإجابة الصحيحة: ${question.answers[question.correct]}`;
+    if (isCorrect) {
+        addReward(interaction.user, rewards.quizCorrectCoins, rewards.quizCorrectXp, "quizCorrect");
+    } else {
+        addReward(interaction.user, 0, 0, "quizWrong");
+    }
 
-    await interaction.update({
+    return interaction.update({
         embeds: [
             new EmbedBuilder()
                 .setColor(isCorrect ? "#2ECC71" : "#E74C3C")
                 .setTitle("❓ أسئلة عامة")
                 .setDescription(`
-${resultText}
+${isCorrect ? `✅ إجابة صحيحة!\n\n🪙 +${rewards.quizCorrectCoins} عملات\n⭐ +${rewards.quizCorrectXp} XP` : `❌ إجابة خاطئة.\n\nالإجابة الصحيحة: ${question.answers[question.correct]}`}
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -145,32 +117,12 @@ ${resultText}
         ],
         components: [
             new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId("start_quiz")
-                    .setLabel("سؤال جديد")
-                    .setEmoji("🔄")
-                    .setStyle(ButtonStyle.Primary),
-
-                new ButtonBuilder()
-                    .setCustomId("back")
-                    .setLabel("رجوع")
-                    .setEmoji("🔙")
-                    .setStyle(ButtonStyle.Secondary),
-
-                new ButtonBuilder()
-                    .setCustomId("close")
-                    .setLabel("إغلاق")
-                    .setEmoji("❌")
-                    .setStyle(ButtonStyle.Danger)
+                new ButtonBuilder().setCustomId("quiz_start").setLabel("سؤال جديد").setEmoji("🔄").setStyle(ButtonStyle.Primary),
+                new ButtonBuilder().setCustomId("back").setLabel("رجوع").setEmoji("🔙").setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId("close").setLabel("إغلاق").setEmoji("❌").setStyle(ButtonStyle.Danger)
             )
         ]
     });
-
-    return true;
 }
 
-module.exports = {
-    quizMenuEmbed,
-    quizMenuButtons,
-    handleQuizButton
-};
+module.exports = { menuEmbed, menuButtons, handleButton };

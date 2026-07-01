@@ -1,35 +1,37 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require("discord.js");
+const { color, rewards } = require("../config.js");
+const { addReward } = require("../utils/db.js");
 
-const xoGames = new Map();
+const games = new Map();
 
-function startXO(message) {
+function start(message) {
     const opponent = message.mentions.users.first();
 
     if (!opponent) return message.reply("منشن اللاعب هكذا: `-xo @player`");
     if (opponent.bot) return message.reply("ما تگدر تلعب ضد بوت.");
     if (opponent.id === message.author.id) return message.reply("ما تگدر تلعب ضد نفسك.");
 
-    const gameId = message.channel.id;
+    const gameId = `${message.channel.id}_${Date.now()}`;
 
-    xoGames.set(gameId, {
+    const game = {
+        id: gameId,
         players: [message.author.id, opponent.id],
-        symbols: {
-            [message.author.id]: "❌",
-            [opponent.id]: "⭕"
-        },
+        symbols: { [message.author.id]: "❌", [opponent.id]: "⭕" },
         turn: message.author.id,
         board: Array(9).fill(null)
-    });
+    };
+
+    games.set(gameId, game);
 
     return message.reply({
-        embeds: [boardEmbed(xoGames.get(gameId))],
-        components: boardButtons(gameId)
+        embeds: [boardEmbed(game)],
+        components: boardButtons(game)
     });
 }
 
 function boardEmbed(game) {
     return new EmbedBuilder()
-        .setColor("#7B2CBF")
+        .setColor(color)
         .setTitle("❌⭕ إكس أو")
         .setDescription(`
 الدور الحالي: <@${game.turn}>
@@ -46,139 +48,87 @@ ${board[6] || "⬜"} ${board[7] || "⬜"} ${board[8] || "⬜"}
 `;
 }
 
-function boardButtons(gameId) {
-    const game = xoGames.get(gameId);
+function boardButtons(game) {
     const rows = [];
-
     for (let r = 0; r < 3; r++) {
         const row = new ActionRowBuilder();
-
         for (let c = 0; c < 3; c++) {
             const index = r * 3 + c;
             const value = game.board[index];
 
             row.addComponents(
                 new ButtonBuilder()
-                    .setCustomId(`xo_${gameId}_${index}`)
+                    .setCustomId(`xo_${game.id}_${index}`)
                     .setLabel(value || `${index + 1}`)
                     .setStyle(value ? ButtonStyle.Secondary : ButtonStyle.Primary)
                     .setDisabled(Boolean(value))
             );
         }
-
         rows.push(row);
     }
-
     return rows;
 }
 
 function checkWinner(board) {
-    const wins = [
-        [0, 1, 2],
-        [3, 4, 5],
-        [6, 7, 8],
-        [0, 3, 6],
-        [1, 4, 7],
-        [2, 5, 8],
-        [0, 4, 8],
-        [2, 4, 6]
-    ];
-
-    for (const [a, b, c] of wins) {
-        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-            return board[a];
-        }
+    const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    for (const [a,b,c] of wins) {
+        if (board[a] && board[a] === board[b] && board[a] === board[c]) return board[a];
     }
-
     if (board.every(Boolean)) return "draw";
-
     return null;
 }
 
-async function handleXOButton(interaction) {
+async function handleButton(interaction) {
     if (!interaction.customId.startsWith("xo_")) return false;
 
     const parts = interaction.customId.split("_");
-    const gameId = parts[1];
-    const index = Number(parts[2]);
+    const index = Number(parts.pop());
+    const gameId = parts.slice(1).join("_");
+    const game = games.get(gameId);
 
-    const game = xoGames.get(gameId);
-
-    if (!game) {
-        await interaction.reply({ content: "اللعبة انتهت.", ephemeral: true });
-        return true;
-    }
-
-    if (!game.players.includes(interaction.user.id)) {
-        await interaction.reply({ content: "هذه اللعبة مو إلك.", ephemeral: true });
-        return true;
-    }
-
-    if (interaction.user.id !== game.turn) {
-        await interaction.reply({ content: "مو دورك.", ephemeral: true });
-        return true;
-    }
-
-    if (game.board[index]) {
-        await interaction.reply({ content: "هذا المكان محجوز.", ephemeral: true });
-        return true;
-    }
+    if (!game) return interaction.reply({ content: "اللعبة انتهت.", ephemeral: true });
+    if (!game.players.includes(interaction.user.id)) return interaction.reply({ content: "هذه اللعبة مو إلك.", ephemeral: true });
+    if (interaction.user.id !== game.turn) return interaction.reply({ content: "مو دورك.", ephemeral: true });
+    if (game.board[index]) return interaction.reply({ content: "هذا المكان محجوز.", ephemeral: true });
 
     game.board[index] = game.symbols[interaction.user.id];
-
     const result = checkWinner(game.board);
 
     if (result && result !== "draw") {
-        xoGames.delete(gameId);
+        games.delete(gameId);
+        addReward(interaction.user, rewards.xoWinCoins, rewards.xoWinXp, "xoWins");
 
-        await interaction.update({
-            embeds: [
-                new EmbedBuilder()
-                    .setColor("#7B2CBF")
-                    .setTitle("❌⭕ إكس أو")
-                    .setDescription(`
+        return interaction.update({
+            embeds: [new EmbedBuilder().setColor(color).setTitle("❌⭕ إكس أو").setDescription(`
 الفائز: <@${interaction.user.id}> ${result}
 
+🪙 +${rewards.xoWinCoins}
+⭐ +${rewards.xoWinXp}
+
 ${renderBoard(game.board)}
-                    `)
-            ],
+            `)],
             components: []
         });
-
-        return true;
     }
 
     if (result === "draw") {
-        xoGames.delete(gameId);
-
-        await interaction.update({
-            embeds: [
-                new EmbedBuilder()
-                    .setColor("#7B2CBF")
-                    .setTitle("❌⭕ إكس أو")
-                    .setDescription(`
+        games.delete(gameId);
+        return interaction.update({
+            embeds: [new EmbedBuilder().setColor(color).setTitle("❌⭕ إكس أو").setDescription(`
 تعادل!
 
 ${renderBoard(game.board)}
-                    `)
-            ],
+            `)],
             components: []
         });
-
-        return true;
     }
 
     game.turn = game.players.find(id => id !== interaction.user.id);
 
-    await interaction.update({
+    return interaction.update({
         embeds: [boardEmbed(game)],
-        components: boardButtons(gameId)
+        components: boardButtons(game)
     });
-
-    return true;
 }
 
-module.exports = {
-    startXO,
-    handleXOButton
-};
+module.exports = { start, handleButton };
